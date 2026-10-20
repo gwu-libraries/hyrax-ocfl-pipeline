@@ -34,7 +34,7 @@ impl HyraxModel {
 
 impl OrmResource { //<'_> {
 
-    pub fn get_data(self) -> (String, String) {
+    pub fn into_ocfl(self) -> (String, String) {
         (self.id, self.data)
     }
 

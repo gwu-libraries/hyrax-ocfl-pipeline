@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub struct OrmResource { // <'a> {
     data: String, //  all ORM data as String, heap-allocated, stored once per resource
     pub id: String, // unique resource ID
-    refs: Vec<String>, //<&'a str>, // other resource IDs pointed to by this one -- difficulty using &str because we need to put in a Box...
+    refs: Option<Vec<String>>, //<&'a str>, // other resource IDs pointed to by this one -- difficulty using &str because we need to put in a Box...
     packed: Option<Vec<Box<OrmResource>>>, //<'a>>>>,
     pub model: HyraxModel,
 }
@@ -32,13 +32,13 @@ impl HyraxModel {
     }
 }
 
-impl OrmResource { //<'_> {
+impl OrmResource {
 
     pub fn into_ocfl(self) -> (String, String) {
         (self.id, self.data)
     }
 
-    pub fn from_row(id: String, data: String, refs: Vec<String>, model: HyraxModel) -> OrmResource {
+    pub fn from_row(id: String, data: String, refs: Option<Vec<String>>, model: HyraxModel) -> OrmResource {
         Self {
                     id,
                     data,
@@ -48,12 +48,29 @@ impl OrmResource { //<'_> {
                 }
     }
 
+    pub fn stage(mut self, resources: &mut HashMap<String, OrmResource>) {
+        match &self.model {
+            HyraxModel::Work | HyraxModel::FileSet => {
+                self.pack_members(resources);
+            },
+            HyraxModel::Permissions => {
+                todo!("match on permissions & pack self");
+            },
+            HyraxModel::FileMetadata => {
+                todo!("match and packs self");
+            }
+        }
+        resources.insert(self.id.clone(), self);
+    }
+
     pub fn pack_members(&mut self, resources: &mut HashMap<String, OrmResource>)  {
-        for id in self.refs.iter() {
-           if let Some(resource) = resources.remove(id.as_str()) {
-               if resource.is_packed() {
-                   self.packed.get_or_insert_default().push(Box::new(resource));
-               }
+        if let &Some(ids) = &self.refs {
+            for id in ids.iter() {
+               if let Some(resource) = resources.get(id.as_str()) {
+                   if resource.is_packed() {
+                       self.packed.get_or_insert_default().push(Box::new(resource));
+                   }
+                }
             }
         }
     }

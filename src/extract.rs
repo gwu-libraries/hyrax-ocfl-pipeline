@@ -2,7 +2,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use serde_json::{self, Value};
 use chrono::NaiveDateTime;
-use crate::resources::{OrmResource, HyraxModel};
+use crate::resources::{HyraxModel::{self, Permissions}, OrmResource};
 use serde::Deserialize;
 use anyhow::{anyhow, Result};
 
@@ -22,7 +22,7 @@ struct OrmResourceRow {
 /*
  * Allow for minimal structured deserialization of the metadata field expressing the relation of works to filesets, filesets to files, and permissions to works and files.
  */
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Member {
     id: String,
 }
@@ -30,6 +30,11 @@ struct Member {
 #[derive(Deserialize)]
 struct Members {
     member_ids: Vec<Member>
+}
+
+#[derive(Deserialize)]
+struct Embargo {
+    embargo_id: Option<[Member; 1]>
 }
 
 #[derive(Deserialize)]
@@ -42,13 +47,45 @@ struct AccessTo {
     access_to :Vec<Member>
 }
 
+fn extract_embargo(metadata: &Value) -> Result<Option<String>> {
+    let with_embargo = Embargo::deserialize(metadata)?;
+    if let Some([embargo]) = with_embargo.embargo_id {
+        Ok(Some(embargo.id))
+    } else {
+        Ok(None)
+    }
+
+}
+
 impl OrmResourceRow {
     fn to_orm_resource(self, work_types: &[&str]) -> Result<OrmResource> {
         if let Some(model) = HyraxModel::from_model_str(&self.internal_resource, work_types) {
-                let members = Members::deserialize(&self.metadata)?;
-                let members = members.member_ids.into_iter().map(|member| member.id).collect::<Vec<String>>();
+            let refs: Option<Vec<String>> = match &model {
+                HyraxModel::Work  => {
+                    let with_members = Members::deserialize(&self.metadata)?;
+                    let mut members = with_members.member_ids.into_iter().map(|member| member.id).collect::<Vec<String>>();
+                    if let Some(embargo_id) = extract_embargo(&self.metadata)? {
+                        members.push(embargo_id)
+                    }
+                    Some(members)
+                },
+                HyraxModel::FileSet => {
+                    let with_files = Files::deserialize(&self.metadata)?;
+                    let mut files = with_files.file_ids;
+                    if let Some(embargo_id) = extract_embargo(&self.metadata)? {
+                        files.push(embargo_id)
+                    }
+                    Some(files)
+                },
+                HyraxModel::Permissions => {
+                    let with_perm = AccessTo::deserialize(&self.metadata)?;
+                    let access_to_ids = with_perm.access_to.into_iter().map(|member| member.id).collect::<Vec<String>>();
+                    Some(access_to_ids)
+                },
+                _ => None,
+            };
 
-            Ok(OrmResource::from_row(self.id.to_string(), self.metadata.to_string(), members, model))
+            Ok(OrmResource::from_row(self.id.to_string(), self.metadata.to_string(), refs, model))
         } else {
             Err(anyhow!("Not an ORM resource"))
         }

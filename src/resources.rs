@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 // wrapper around each resource
+#[derive(Debug)]
 pub struct OrmResource { // <'a> {
     data: String, //  all ORM data as String, heap-allocated, stored once per resource
     pub id: String, // unique resource ID
@@ -54,54 +55,90 @@ impl OrmResource {
         self.refs.as_ref()
     }
 
-    /* Scans the provided hash for references to resources that should be included as children of self. Returns a list of keys to remove from the hash of references where these refer to children that are now packed into self.
-     *
-     * TO DO -> Refactor to be able to delegate to self.pack_one(resource) without holding an immutable reference to self -->  return IDs to remove, and let Staging code handle the removal?
-     */
-    pub fn pack_children(&mut self, resources: &mut HashMap<String, OrmResource>) -> Option<Vec<String>>  {
-        let mut refs_to_remove: Vec<String> = vec![];
-        if let Some(ids) = self.refs.as_ref() {
-            for id in ids.iter() {
-               if let Some(resource) = resources.get(id.as_str()) {
-                   if resource.is_packed() {
-                       if let Some((id, resource)) = resources.remove_entry(id.as_str()) {
-                           //self.pack_one(resource);
-                           self.packed.get_or_insert_default().push(Box::new(resource));
-                           refs_to_remove.push(id);
-                       }
-                   }
-                }
+    pub fn check_for_child(&self, resource_id: &str) -> Option<bool> {
+        // Permissions by default have no children; their refs point to parents
+        if self.model == HyraxModel::Permissions {
+            return None;
+        }
+        // No refs --> no children (except perhaps a Permission)
+        let refs = self.refs()?;
+        for _ref in refs {
+            if _ref == &resource_id {
+                return Some(true);
             }
         }
-        if refs_to_remove.len() > 0 {
-            Some(refs_to_remove)
-        } else {
-            None
-        }
+        Some(false) // has children, but this resource isn't one of them
     }
 
-    pub fn pack_one(&mut self, resource: OrmResource) {
+    pub fn pack_child(&mut self, resource: OrmResource) {
         self.packed.get_or_insert_default().push(Box::new(resource));
     }
 
-    pub fn pack_self(self, resources: &mut HashMap<String, OrmResource>) -> Option<Self> {
-        for other in resources.values_mut() {
-            for id in other.refs.iter() {
-                if self.id == *id {
-                    other.pack_one(self);
-                    return None;
+    pub fn is_packed(&self) -> Option<bool> {
+        let refs = self.refs()?; // if None, then automatically packed
+        match self.model {
+            HyraxModel::FileSet | HyraxModel::Work => {
+                if let Some(packed) = self.packed.as_ref() {
+                    Some(refs.len() + 1 == packed.len()) // for FileSet & Work, the number of children will include the permission object pointing to this resource, in addition to any other children
+                } else {
+                    Some(false) // nothing packed yet
                 }
+            },
+            HyraxModel::Permissions => {
+                Some(true) // permissions have no children, so packed by default
+            },
+            _ => { Some(true) } // Raise error? FileMetadata and Embargo should have no children
+        }
+    }
+
+}
+
+pub fn unnest_resources(mut root_resource: Box<OrmResource>) -> Vec<Box<OrmResource>> {
+    let resources = root_resource.packed.take();
+    let mut results: Vec<Box<OrmResource>> = vec![];
+    if let Some(resources) = resources {
+        for resource in resources.into_iter() {
+            for nested in unnest_resources(resource) {
+                results.push(nested);
             }
         }
-        return Some(self)
     }
+    results.push(root_resource);
+    results
+}
 
-    pub fn is_packed(&self) -> bool {
-        match self.model {
-            HyraxModel::Work | HyraxModel::FileSet =>
-                self.packed.as_ref().filter(|p| p.len() == self.refs.len()).is_some(),
-            _ => true
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unnests_orm_resources() {
+
+        let third = OrmResource {
+            data: "".to_owned(),
+            id: "3".to_owned(),
+            refs: None,
+            model: HyraxModel::Work,
+            packed: None,
+        };
+
+        let second = OrmResource {
+            data: "".to_owned(),
+            id: "2".to_owned(),
+            refs: None,
+            model: HyraxModel::Work,
+            packed: Some(vec![Box::new(third)]),
+        };
+
+        let first = OrmResource {
+            data: "".to_owned(),
+            id: "1".to_owned(),
+            refs: None,
+            model: HyraxModel::Work,
+            packed: Some(vec![Box::new(second)]),
+        };
+        let unnested: Vec<String> = unnest_resources(Box::new(first)).iter().map(|resource| resource.id.to_owned()).collect();
+        assert_eq!(unnested, vec!["3".to_owned(), "2".to_owned(), "1".to_owned()]);
 
     }
- }
+}

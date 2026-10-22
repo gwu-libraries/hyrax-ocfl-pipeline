@@ -1,0 +1,4 @@
+{"id": "a5cce34d-e948-4ed4-86da-e773c9af8443", "model": "Work", "data": "", "refs": ["4b77b296-0354-4f9d-a8a0-9ef778397dbb", "01f98d32-4103-4556-b704-c038a9061d13"]}
+{"id": "4b77b296-0354-4f9d-a8a0-9ef778397dbb", "model": "FileSet", "data": "", "refs": ["f4b32d9a-4597-4df3-802d-9cd712b1c2c1"]}
+{"id": "f4b32d9a-4597-4df3-802d-9cd712b1c2c1", "model": "FileMetadata", "data": ""}
+{"id": "01f98d32-4103-4556-b704-c038a9061d13", "model": "Embargo", "data": ""}

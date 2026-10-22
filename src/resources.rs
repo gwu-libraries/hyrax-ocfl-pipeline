@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use serde::{Deserialize};
+use serde_json::json;
 
 // wrapper around each resource
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct OrmResource { // <'a> {
     data: String, //  all ORM data as String, heap-allocated, stored once per resource
     pub id: String, // unique resource ID
@@ -12,12 +13,14 @@ pub struct OrmResource { // <'a> {
 
 // label for matching on
 // derive attributes allow us to use it also as the key in a hash
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+// TO DO: attributes to rename strings from JSON
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Deserialize)]
 pub enum HyraxModel {
     Work,
     FileSet,
     Permissions,
     FileMetadata, // TO DO: add filename and type as inner struct
+    Embargo,
 }
 
 impl HyraxModel {
@@ -29,6 +32,7 @@ impl HyraxModel {
                 "Hyrax::AccessControl" => Some(Self::Permissions),
                 "Hyrax::FileMetadata" => Some(Self::FileMetadata),
                 "Hyrax::FileSet" => Some(Self::FileSet),
+                "Hyrax::Embargo" => Some(Self::Embargo),
                 _ => None
             }
         }
@@ -55,7 +59,7 @@ impl OrmResource {
         self.refs.as_ref()
     }
 
-    pub fn check_for_child(&self, resource_id: &str) -> Option<bool> {
+    pub fn check_for_child(&self, resource: &OrmResource) -> Option<bool> {
         // Permissions by default have no children; their refs point to parents
         if self.model == HyraxModel::Permissions {
             return None;
@@ -63,15 +67,21 @@ impl OrmResource {
         // No refs --> no children (except perhaps a Permission)
         let refs = self.refs()?;
         for _ref in refs {
-            if _ref == &resource_id {
+            if _ref == resource.id.as_str() {
                 return Some(true);
             }
         }
         Some(false) // has children, but this resource isn't one of them
     }
 
-    pub fn pack_child(&mut self, resource: OrmResource) {
+
+    pub fn pack_child_mut(&mut self, resource: OrmResource) {
         self.packed.get_or_insert_default().push(Box::new(resource));
+    }
+
+    pub fn pack_child(mut self, resource: OrmResource) -> Self {
+        self.packed.get_or_insert_default().push(Box::new(resource));
+        self
     }
 
     pub fn is_packed(&self) -> Option<bool> {
@@ -79,7 +89,7 @@ impl OrmResource {
         match self.model {
             HyraxModel::FileSet | HyraxModel::Work => {
                 if let Some(packed) = self.packed.as_ref() {
-                    Some(refs.len() + 1 == packed.len()) // for FileSet & Work, the number of children will include the permission object pointing to this resource, in addition to any other children
+                    Some(refs.len() == packed.len()) // for FileSet & Work, the number of children will include the permission object pointing to this resource, in addition to any other children
                 } else {
                     Some(false) // nothing packed yet
                 }
@@ -110,6 +120,19 @@ pub fn unnest_resources(mut root_resource: Box<OrmResource>) -> Vec<Box<OrmResou
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deserializes_orm_json() {
+        let json = r#"{"data": "",
+            "id": "aaaa-bbbb-cccc-dddd",
+            "refs": ["1111-2222-3333-4444", "5555-6666-7777-8888"],
+            "model": "Work"}
+            "#;
+        let resource: OrmResource = serde_json::from_str(json).unwrap();
+        assert_eq!(resource.id, "aaaa-bbbb-cccc-dddd".to_owned());
+        assert_eq!(resource.refs, Some(vec!["1111-2222-3333-4444".to_owned(), "5555-6666-7777-8888".to_owned()]));
+
+    }
 
     #[test]
     fn unnests_orm_resources() {

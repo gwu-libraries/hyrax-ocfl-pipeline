@@ -64,10 +64,15 @@ impl OrmResource {
         if self.model == HyraxModel::Permissions {
             return None;
         }
-        // No refs --> no children (except perhaps a Permission)
-        let refs = self.refs()?;
+        // If the possible child is a Permissions resource, check its refs for the ID of self
+        let (refs, id) = if resource.model == HyraxModel::Permissions {
+            (resource.refs()?, self.id.as_str())
+        } else {
+            // Otherwise, the child's ID will belong to the parent's refs
+            (self.refs()?, resource.id.as_str())
+        };
         for _ref in refs {
-            if _ref == resource.id.as_str() {
+            if _ref == id {
                 return Some(true);
             }
         }
@@ -89,7 +94,7 @@ impl OrmResource {
         match self.model {
             HyraxModel::FileSet | HyraxModel::Work => {
                 if let Some(packed) = self.packed.as_ref() {
-                    Some(refs.len() == packed.len()) // for FileSet & Work, the number of children will include the permission object pointing to this resource, in addition to any other children
+                    Some(refs.len() + 1 == packed.len()) // for FileSet & Work, the number of children will include the permission object pointing to this resource, in addition to any other children
                 } else {
                     Some(false) // nothing packed yet
                 }

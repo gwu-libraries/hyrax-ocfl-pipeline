@@ -1,4 +1,11 @@
-{"id": "a5cce34d-e948-4ed4-86da-e773c9af8443", "model": "Work", "data": "", "refs": ["4b77b296-0354-4f9d-a8a0-9ef778397dbb", "01f98d32-4103-4556-b704-c038a9061d13"]}
-{"id": "4b77b296-0354-4f9d-a8a0-9ef778397dbb", "model": "FileSet", "data": "", "refs": ["f4b32d9a-4597-4df3-802d-9cd712b1c2c1"]}
-{"id": "f4b32d9a-4597-4df3-802d-9cd712b1c2c1", "model": "FileMetadata", "data": ""}
-{"id": "01f98d32-4103-4556-b704-c038a9061d13", "model": "Embargo", "data": ""}
+{"id": "e31e1983-f700-4009-a280-0ee00991b313", "model": "Work", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["df87d90f-7b3a-4426-a38a-19083c227fce", "c5d7f825-8bb4-42a7-86b6-da641fb3aa61", "1834e270-4b8e-43f9-b89f-a4756fab6332"]}
+{"id": "df87d90f-7b3a-4426-a38a-19083c227fce", "model": "FileSet", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["17d235f4-4a53-4352-bf64-85f3e881b25d", "af2c7ad8-c70b-4093-a9df-e1176159a692"]}
+{"id": "c5d7f825-8bb4-42a7-86b6-da641fb3aa61", "model": "FileSet", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["243a5a7c-b940-4688-8397-d1bd6244c56c", "28e2753b-6120-4604-b2dd-f6964def3b36"]}
+{"id": "17d235f4-4a53-4352-bf64-85f3e881b25d", "model": "FileMetadata", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6"}
+{"id": "243a5a7c-b940-4688-8397-d1bd6244c56c", "model": "FileMetadata", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6"}
+{"id": "af2c7ad8-c70b-4093-a9df-e1176159a692", "model": "Embargo", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6"}
+{"id": "28e2753b-6120-4604-b2dd-f6964def3b36", "model": "Embargo", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6"}
+{"id": "1834e270-4b8e-43f9-b89f-a4756fab6332", "model": "Embargo", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6"}
+{"id": "31724f85-b592-4b51-b31e-399fa2935b50", "model": "Permissions", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["e31e1983-f700-4009-a280-0ee00991b313"]}
+{"id": "bac212b5-a9e0-44b3-814c-dfe0f94382e5", "model": "Permissions", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["df87d90f-7b3a-4426-a38a-19083c227fce"]}
+{"id": "df9def38-29cb-4b55-9a17-7e6ea442a1a5", "model": "Permissions", "data": "93dc37e8-9cd0-4b2f-93dd-4cb0962452b6", "refs": ["c5d7f825-8bb4-42a7-86b6-da641fb3aa61"]}

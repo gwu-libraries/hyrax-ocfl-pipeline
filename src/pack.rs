@@ -1,7 +1,6 @@
 use crate::resources::*;
 use std::sync::mpsc;
 use anyhow::Result;
-use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct Staging {
@@ -107,10 +106,10 @@ mod tests {
         let work = staging.staging_list.pop().unwrap();
         assert_eq!(work.model, HyraxModel::Work);
         let unpacked = unnest_resources(Box::new(work));
-        assert_eq!(unpacked.len(), 4);
+        assert_eq!(unpacked.len(), 11);
         let models: HashSet<HyraxModel> = unpacked.iter().map(|resource| resource.model).collect();
         let mut should_have = HashSet::new();
-        for var in [HyraxModel::Embargo, HyraxModel::FileSet, HyraxModel::Work, HyraxModel::FileMetadata] {
+        for var in [HyraxModel::Embargo, HyraxModel::FileSet, HyraxModel::Work, HyraxModel::FileMetadata, HyraxModel::Permissions] {
             should_have.insert(var);
         }
         assert_eq!(models, should_have);

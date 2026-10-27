@@ -2,20 +2,21 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use serde_json::{self, Value};
 use chrono::NaiveDateTime;
-use crate::resources::{HyraxModel::{self, Permissions}, OrmResource};
+use crate::resources::{HyraxModel, OrmResource};
 use serde::Deserialize;
 use anyhow::{anyhow, Result};
 
 /*
  * Deserializes a row from the Hyrax orm_resources table, corresponding to a Hyrax object of some type to be stored in OCFL
  */
-#[derive(sqlx::FromRow)]
-struct OrmResourceRow {
-    id: Uuid,
-    metadata: Value,
+#[derive(FromRow)]
+#[derive(Debug)]
+pub struct OrmResourceRow {
+    pub id: Uuid,
+    pub metadata: Value,
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
-    internal_resource: String,
+    pub internal_resource: String,
     lock_version: i32,
 }
 
@@ -38,8 +39,15 @@ struct Embargo {
 }
 
 #[derive(Deserialize)]
+#[serde(untagged)] // untagged, because these variants are just wrappers for two different types
+enum FileIds {
+    FileIdStrings(Vec<String>),
+    FileIdMembers(Vec<Member>)
+}
+
+#[derive(Deserialize)]
 struct Files {
-    file_ids: Vec<String>
+    file_ids: FileIds
 }
 
 #[derive(Deserialize)]
@@ -57,8 +65,19 @@ fn extract_embargo(metadata: &Value) -> Result<Option<String>> {
 
 }
 
+fn extract_file_ids(file_ids: FileIds) -> Result<Vec<String>> {
+    match file_ids {
+        FileIds::FileIdStrings(id_strings) => Ok(id_strings),
+        FileIds::FileIdMembers(members) => {
+
+            let ids = members.into_iter().map(|member| member.id).collect::<Vec<String>>();
+            Ok(ids)
+        }
+    }
+}
+
 impl OrmResourceRow {
-    fn to_orm_resource(self, work_types: &[&str]) -> Result<OrmResource> {
+    pub fn to_orm_resource(self, work_types: &[&str]) -> Result<OrmResource> {
         if let Some(model) = HyraxModel::from_model_str(&self.internal_resource, work_types) {
             let refs: Option<Vec<String>> = match &model {
                 HyraxModel::Work  => {
@@ -71,7 +90,7 @@ impl OrmResourceRow {
                 },
                 HyraxModel::FileSet => {
                     let with_files = Files::deserialize(&self.metadata)?;
-                    let mut files = with_files.file_ids;
+                    let mut files = extract_file_ids(with_files.file_ids).unwrap_or(vec![]);
                     if let Some(embargo_id) = extract_embargo(&self.metadata)? {
                         files.push(embargo_id)
                     }
@@ -91,6 +110,7 @@ impl OrmResourceRow {
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {

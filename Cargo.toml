@@ -10,7 +10,9 @@ itertools = "0.15.0"
 rocfl = "1.7.0"
 serde = "1.0.229"
 serde_json = "1.0.154"
-sqlx = "0.9.0"
+sqlx = { version = "0.9", features = [ "runtime-tokio", "tls-native-tls", "postgres", "uuid", "chrono", "json"] }
+tokio = { version = "1.54.1", features = ["full"]}
+futures-util = { version = "0.3.4" }
 
 [dependencies.uuid]
 version = "1.28.0"

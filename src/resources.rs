@@ -1,8 +1,8 @@
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 // wrapper around each resource
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct OrmResource { // <'a> {
     data: String, //  all ORM data as String, heap-allocated, stored once per resource
     pub id: String, // unique resource ID
@@ -14,7 +14,7 @@ pub struct OrmResource { // <'a> {
 // label for matching on
 // derive attributes allow us to use it also as the key in a hash
 // TO DO: attributes to rename strings from JSON
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Deserialize, Serialize)]
 pub enum HyraxModel {
     Work,
     FileSet,
